@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.dianping.search</groupId>
+    <artifactId>dpsearch-vector-platform</artifactId>
+    <packaging>pom</packaging>
+    <version>0.0.1-SNAPSHOT</version>
+    <modules>
+        <module>dpsearch-vector-platform-offline</module>
+    </modules>
+    <name>dpsearch-vector-platform</name>
+
+
+
+    <dependencyManagement>
+
+        <dependencies>
+        </dependencies>
+
+    </dependencyManagement>
+
+    <distributionManagement>
+        <repository>
+            <id>dianping.repo</id>
+            <url>http://mvn.dianpingoa.com/dianping-releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>dianping.repo.snapshots</id>
+            <url>http://mvn.dianpingoa.com/dianping-snapshots</url>
+        </snapshotRepository>
+
+    </distributionManagement>
+
+    <repositories>
+        <repository>
+            <id>meituan-nexus-releases</id>
+            <name>Meituan Nexus Repository</name>
+            <url>http://maven.sankuai.com/nexus/content/repositories/releases/</url>
+        </repository>
+    </repositories>
+</project>

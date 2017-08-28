@@ -1,0 +1,45 @@
+#ignore target under current directory and all subdirectories:
+target/
+*/target/
+test-output/
+*/test-output/
+*tar.gz
+*.DS_Store
+
+#ignore settings & gitignore file
+.settings/
+*/.settings/
+.springBeans
+*/.springBeans
+
+#ignore svn files
+.svn
+*/.svn
+
+.project
+
+*/.project
+
+.classpath
+*/.classpath
+
+.data/
+*/.data/
+*~
+
+.idea/
+*.iml
+
+#logs
+*/*/logs/
+
+*/.DS_Store
+.metadata/*
+
+./addNewScoreItem.sh
+addNewScoreItem.sh
+
+git.properties
+**/git.properties
+
+tags
