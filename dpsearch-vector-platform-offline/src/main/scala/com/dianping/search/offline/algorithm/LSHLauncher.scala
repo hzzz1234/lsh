@@ -24,13 +24,13 @@ object LSHLauncher {
 
       System.err.println("Usage:" +
         "[inputtype=1] [appname] [input_path] [output_path] [hash_path] [lshtype:{1:minhashlsh,2:cosinelsh,3:e2lsh}] [row_spilter] [vector_splitor] [or_num] [and_num] [vectortype:{1:DenseVector,2:SparseVector}] [maxid(for minhash)|dimension(for cosinelsh)|distance(for e2lsh)] [tablesize(for e2lsh)]\n" +
-        "[inputtype=2] [appname] [inputtype:{1:file,2:sql}] [inputSql] [output_path] [hash_path] [lshtype:{1:minhashlsh,2:cosinelsh,3:e2lsh}] [vector_splitor] [or_num] [and_num] [vectortype:{1:DenseVector,2:SparseVector}] [maxid(for minhash)|dimension(for cosinelsh)|distance(for e2lsh) [tablesize(for e2lsh)]")
+        "[inputtype=2] [appname] [inputtype:{1:file,2:sql}] [inputSql] [output_path] [hash_path] [lshtype:{1:minhashlsh,2:cosinelsh,3:e2lsh}] [vector_splitor] [or_num] [and_num] [vectortype:{1:DenseVector,2:SparseVector}] [maxid(for minhash)|dimension(for cosinelsh)|distance(for e2lsh)] [tablesize(for e2lsh)]")
       System.exit(-1)
 
     }
     val inputtype : Int = args(0).toInt
     var origin_data : RDD[(String,SparseVector)] = null
-    val sparkConf = new SparkConf()
+    val sparkConf = new SparkConf().setAppName("aa").setMaster("local")
     val sparkContext = new SparkContext(sparkConf)
     var ornum : Int = 0
     var andnum : Int = 0
