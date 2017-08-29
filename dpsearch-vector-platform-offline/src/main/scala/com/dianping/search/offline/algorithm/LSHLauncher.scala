@@ -1,12 +1,16 @@
 package com.dianping.search.offline.algorithm
 
+import java.nio.file.FileSystem
+
 import com.dianping.search.offline.algorithm.cosinelsh.CosineLSH
 import com.dianping.search.offline.algorithm.e2lsh.E2LSH
 import com.dianping.search.offline.algorithm.minhash.MinHashLSH
-import org.apache.spark.SparkConf
+import org.apache.hadoop.fs.Path
+import org.apache.spark
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.mllib.linalg.{SparseVector, Vectors}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.hive.HiveContext
 
 /**
   * Created by zhen.huaz on 2017/8/9.
@@ -25,19 +29,21 @@ object LSHLauncher {
 
     }
     val inputtype : Int = args(0).toInt
-    var spark : SparkSession = null
     var origin_data : RDD[(String,SparseVector)] = null
+    val sparkConf = new SparkConf()
+    val sparkContext = new SparkContext(sparkConf)
     var ornum : Int = 0
     var andnum : Int = 0
     var vectortype : Int = 0
     var maxid : Int = 0
     var lshtype : Int = 0
     var tablesize : Int = 0
+    var output : String = null
     if(inputtype == 1 && args.length == 13){
 
       val appname : String = args(1)
       val input : String = args(2)
-      val output : String = args(3)
+      output = args(3)
       val hashout : String = args(4)
       lshtype = args(5).toInt
       val rowspilter : String = args(6)
@@ -47,21 +53,22 @@ object LSHLauncher {
       vectortype = Integer.parseInt(args(10))
       maxid = args(11).toInt
       tablesize = args(12).toInt
-      val sparkConf = new SparkConf().setAppName(appname).setMaster("local")
-      spark = SparkSession.builder().config(sparkConf).getOrCreate()
       if(vectortype == 1) {
-        origin_data = spark.sparkContext.textFile(input).map(line => (line.split(rowspilter)(0)
+
+        origin_data = sparkContext.textFile(input).map(line => (line.split(rowspilter)(0)
           , Vectors.dense(for (ele <- line.split(rowspilter)(1).split(vectorspilter)) yield ele.toDouble).toSparse))
       }
-      else
-        origin_data = spark.sparkContext.textFile(input).map(line => (line.split(rowspilter)(0),Vectors.sparse(line.split(rowspilter)(1).toInt,
+      else{
+        origin_data = sparkContext.textFile(input).map(line => (line.split(rowspilter)(0),Vectors.sparse(line.split(rowspilter)(1).toInt,
           for(ele <- line.split(rowspilter)(2).split(vectorspilter)) yield ele.split(":")(0).toInt,
           for(ele <- line.split(rowspilter)(2).split(vectorspilter)) yield ele.split(":")(1).toDouble).toSparse))
-    } else if(inputtype == 2 && args.length == 11) {
+      }
+
+    } else if(inputtype == 2 && args.length == 12) {
 
       val appname : String = args(0)
       val input : String = args(2)
-      val output : String = args(3)
+      output = args(3)
       val hashout : String = args(4)
       lshtype = args(5).toInt
       val spilter : String = args(6)
@@ -70,14 +77,13 @@ object LSHLauncher {
       vectortype = Integer.parseInt(args(9))
       maxid = args(10).toInt
       tablesize = args(11).toInt
-      spark = SparkSession.builder.enableHiveSupport()
-        .appName(appname).master("local")
-        .getOrCreate()
+      val hiveContext = new HiveContext(sparkContext)
+
       if(vectortype == 1)
-        origin_data = spark.sql(input).rdd.map(line => (line.getAs[String]("id")
+        origin_data = hiveContext.sql(input).rdd.map(line => (line.getAs[String]("id")
           ,Vectors.dense(for(ele <- line.getAs[String]("vector").split(" ")) yield ele.toDouble).toSparse))
       else
-        origin_data = spark.sql(input).rdd.map(line => (line.getAs[String]("id"),Vectors.sparse(line.getAs[Int]("n"),
+        origin_data = hiveContext.sql(input).rdd.map(line => (line.getAs[String]("id"),Vectors.sparse(line.getAs[Int]("n"),
           for(ele <- line.getAs[String]("vector").split(" ")) yield ele.split(":")(0).toInt,
           for(ele <- line.getAs[String]("vector").split(" ")) yield ele.split(":")(1).toDouble).toSparse))
     } else {
@@ -87,57 +93,64 @@ object LSHLauncher {
       System.exit(-1)
     }
     val n = ornum * andnum
+    val hadoopConf = sparkContext.hadoopConfiguration
+    val hdfs = org.apache.hadoop.fs.FileSystem.get(hadoopConf)
+    if(hdfs.exists(new Path(output))){
+      //为防止误删，禁止递归删除
+      hdfs.delete(new Path(output),true)
+    }
 
     if(lshtype == 1){
       val lsh = new MinHashLSH(data = origin_data, p = maxid+2, numRows = n, numBands = ornum, minClusterSize = 2)
       val model = lsh.run
-
-      println("samples: " + origin_data.count())
-      println("clusters: " + model.clusters.count())
-      for ( ele <- model.cluster_vector.collect())
-        println("cluter_vector:" + ele)
-      for ( ele <- model.vector_hashlist.collect())
-        println("result:" + ele._1 +","+ele._2._2)
-      for ( hashtab <- model.hashFunctions){
-        println("hashtab:" +hashtab)
-      }
-      for ( ele <- model.scores.collect())
-        println("r:" + ele)
+      model.vector_hashlist.map(line => line._1+"\t"+line._2._1+"\t"+line._2._2).saveAsTextFile(output)
+//      println("samples: " + origin_data.count())
+//      println("clusters: " + model.clusters.count())
+//      for ( ele <- model.cluster_vector.collect())
+//        println("cluter_vector:" + ele)
+//      for ( ele <- model.vector_hashlist.collect())
+//        println("result:" + ele._1 +","+ele._2._2)
+//      for ( hashtab <- model.hashFunctions){
+//        println("hashtab:" +hashtab)
+//      }
+//      for ( ele <- model.scores.collect())
+//        println("r:" + ele)
     } else if (lshtype == 2){
       val origin_dense = origin_data.map(line => (line._1,line._2.toDense))
       val lsh = new CosineLSH(data = origin_dense, p = maxid, numRows = n, numBands = ornum, minClusterSize = 2)
       val model = lsh.run
-
-      println("samples: " + origin_data.count())
-      println("clusters: " + model.clusters.count())
-      for ( ele <- model.cluster_vector.collect())
-        println("cluter_vector:" + ele)
-      for ( ele <- model.vector_hashlist.collect())
-        println("result:" + ele._1 +","+ele._2._2)
-      for ( hashVector <- model.hashVectors){
-        println("hashVector:" +hashVector)
-      }
-      for ( ele <- model.scores.collect())
-        println("r:" + ele)
+      model.vector_hashlist.map(line => line._1+"\t"+line._2._1+"\t"+line._2._2).saveAsTextFile(output)
+//      println("samples: " + origin_data.count())
+//      println("clusters: " + model.clusters.count())
+//      for ( ele <- model.cluster_vector.collect())
+//        println("cluter_vector:" + ele)
+//      for ( ele <- model.vector_hashlist.collect())
+//        println("result:" + ele)
+//      for ( hashVector <- model.hashVectors){
+//        println("hashVector:" +hashVector)
+//      }
+//      for ( ele <- model.scores.collect())
+//        println("r:" + ele)
 
     } else if (lshtype == 3) {
       val origin_dense = origin_data.map(line => (line._1,line._2.toDense))
       val lsh = new E2LSH(data = origin_dense, w = maxid, numRows = n, numBands = ornum,ts = tablesize, minClusterSize = 2)
       val model = lsh.run
-
-      println("samples: " + origin_data.count())
-      println("clusters: " + model.clusters.count())
-      for ( ele <- model.cluster_vector.collect())
-        println("cluter_vector:" + ele)
-      for ( ele <- model.vector_hashlist.collect())
-        println("result:" + ele._1 +","+ele._2._2)
-      for ( hashVector <- model.hashFunctions){
-        println("hashVector:" +hashVector)
-      }
-      for ( ele <- model.scores.collect())
-        println("r:" + ele)
+      model.vector_hashlist.map(line => line._1+"\t"+line._2._1+"\t"+line._2._2).saveAsTextFile(output)
+//      println("samples: " + origin_data.count())
+//      println("clusters: " + model.clusters.count())
+//      for ( ele <- model.cluster_vector.collect())
+//        println("cluter_vector:" + ele)
+//      for ( ele <- model.vector_hashlist.collect())
+//        println("result:" + ele._1 +","+ele._2._2)
+//      for ( hashVector <- model.hashFunctions){
+//        println("hashVector:" +hashVector)
+//      }
+//      for ( ele <- model.scores.collect())
+//        println("r:" + ele)
 
     }
+
 
   }
 
