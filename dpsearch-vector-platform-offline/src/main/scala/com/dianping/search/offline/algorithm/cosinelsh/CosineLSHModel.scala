@@ -11,15 +11,15 @@ import scala.collection.mutable.ListBuffer
 
 /**
   * minhash模型的构造方法
-  * @param n 表示生成构建随机向量的维度值
+  * @param dimension 表示生成构建随机向量的维度值
   */
-class CosineLSHModel(n : Int, numRows : Int) extends Serializable {
+class CosineLSHModel(dimension : Int, numRows : Int) extends Serializable {
 
   /** generate random vector */
   private val _hashVectors = ListBuffer[CosineHashVector]()
   //生成hash表列表
   for (i <- 0 until numRows)
-    _hashVectors += CosineHashVector.create(n)
+    _hashVectors += CosineHashVector.create(dimension)
   //为hash表添加id
   final val hashVectors : List[(CosineHashVector, Int)] = _hashVectors.toList.zipWithIndex
 
@@ -43,7 +43,7 @@ class CosineLSHModel(n : Int, numRows : Int) extends Serializable {
   var scores : RDD[(Long, Double)] = null
 
   /** **/
-  var vector_hashlist : RDD[(String, (DenseVector,List[String]))] = null
+  var vector_hashlist : RDD[(String,List[String])] = null
 
   /** filter out scores below threshold. this is an optional step.*/
   def filter(score : Double) : CosineLSHModel = {

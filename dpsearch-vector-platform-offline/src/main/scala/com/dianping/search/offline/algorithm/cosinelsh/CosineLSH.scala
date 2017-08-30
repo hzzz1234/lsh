@@ -2,37 +2,47 @@ package com.dianping.search.offline.algorithm.cosinelsh
 
 import java.lang.Math._
 
-import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vectors}
+import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector, Vectors}
 import org.apache.spark.rdd.RDD
 
 /**
   * Created by zhen.huaz on 2017/8/11.
   * support format : (vectorid,vector)
   */
-class CosineLSH (data : RDD[(String,DenseVector)], p : Int, numRows : Int, numBands : Int, minClusterSize : Int) extends Serializable {
+/**
+  *
+  * @param origin_data  一般使用密集矩阵计算
+  * @param dimension 向量维度
+  * @param numRows  稀疏签名矩阵的行数
+  * @param numBands band数(用于拆分稀疏签名矩阵为多个局部相似度量)
+  * @param minClusterSize 最小聚合数(一般为2)
+  */
+class CosineLSH (origin_data : RDD[(String,Vector)], dimension : Int, numRows : Int, numBands : Int, minClusterSize : Int) extends Serializable {
 
-  /** run LSH using the constructor parameters */
+  /** run CosineLSH using the constructor parameters */
   def run() : CosineLSHModel = {
 
     //创建一个minhash的模型
-    val model = new CosineLSHModel(p,numRows)
+    val model = new CosineLSHModel(dimension,numRows)
 
+    val data = origin_data.map(line => (line._1,line._2.toDense)).cache
+    // 计算签名矩阵
+    // - 对向量hash numrows次
+    // - 将hash后的值定位到对应的band中,后面会根据band号进行分组,构建局部签名的桶
+    // output ((vector idx, band#), minhash)
+    val signatures = data.flatMap(v => model.hashVectors.flatMap(h => List(((v._1, h._2 % numBands),h._1.cosinehash(v._2.toDense)))))
 
-    //compute signatures from matrix
-    // - hash each vector <numRows> times
-    // - position hashes into bands. we'll later group these signature bins and has them as well
-    //this gives us ((vector idx, band#), minhash)
-    val signatures = data.flatMap(v => model.hashVectors.flatMap(h => List(((v._1, h._2 % numBands),h._1.cosinehash(v._2.toDense))))).cache()
-
+    // 对同band下的数据进行签名
+    // output ((band+minlist)->bandhashvalue,key)
     val mid = signatures.groupByKey().map(x => (transforMD5(x._1._2,x._2), x._1._1)).cache()
-    model.vector_hashlist = data.join(mid.map(x => x.swap).groupByKey().map(x => (x._1,x._2.toList))).map(row => (row._1,(row._2._1,row._2._2)))
+    // output (key,hashlist)
+    model.vector_hashlist = data.join(mid.map(x => x.swap).groupByKey().map(x => (x._1,x._2.toList))).map(row => (row._1,row._2._2)).cache()
 
-      //reorganize data for shuffle
-    //this gives us ((band#, hash of minhash list), vector id)
-    //groupByKey gives us items that hash together in the same band
+    // 组织所有在同一个band且minhashlist的值一样的数据合并到一起
+    // output (bandhashvalue, vectorid list)
     model.bands = mid.groupByKey().cache()
 
-    //we only want groups of size >= <minClusterSize>
+    //找到所有在聚合点数大于2点聚合id
     //(vector id, cluster id)
     model.vector_cluster = model.bands.filter(x => x._2.size >= minClusterSize) //获取大于2的
       .map(x => x._2.toList.sorted) //大于2的所有id排序

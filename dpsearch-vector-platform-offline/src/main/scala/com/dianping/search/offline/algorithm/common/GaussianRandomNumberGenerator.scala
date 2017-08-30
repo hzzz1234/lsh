@@ -1,5 +1,7 @@
 package com.dianping.search.offline.algorithm.common
 
+import java.text.{DecimalFormat, NumberFormat}
+
 import org.apache.commons.math3.random.{JDKRandomGenerator, RandomGenerator}
 
 /**
@@ -38,6 +40,7 @@ class GaussianRandomNumberGenerator extends RandomNumberGenerator{
     }
     return vector
   }
+
 }
 
 object GaussianRandomNumberGenerator{

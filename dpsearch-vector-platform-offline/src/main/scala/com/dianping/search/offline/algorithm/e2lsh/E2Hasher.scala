@@ -14,21 +14,21 @@ import scala.util.Random
   * m is the number of hash bins
   */
 
-class E2Hasher(a : Array[Double], b : Double, w : Int) extends Serializable {
+class E2Hasher(a : Array[Double], b : Double, distance : Int) extends Serializable {
 
   override def toString(): String = {
     val sb = new StringBuilder
     sb.append("([")
     for( ele <- a ) {
-      sb.append(ele+" ")
+      sb.append("%06.5f".format(ele)+" ")
     }
     sb.append("]")
-    sb.append(", " + b +", " + w + ")")
+    sb.append(", " + b +", " + distance + ")")
     sb.toString()
   }
 
   def e2hash(v : Array[Double]) : Int = {
-    return Math.round((E2Hasher.f2jBLAS.ddot(v.size,a,1,v,1) + b) / w).toInt
+    return Math.round((E2Hasher.f2jBLAS.ddot(v.size,a,1,v,1) + b) / distance).toInt
   }
 
 }

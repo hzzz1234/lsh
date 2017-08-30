@@ -44,7 +44,7 @@ class MinHashLSHModel(p : Int, numRows : Int) extends Serializable {
   var scores : RDD[(Long, (Double,Int))] = null
 
   /** **/
-  var vector_hashlist : RDD[(String, (SparseVector,List[String]))] = null
+  var vector_hashlist : RDD[(String,List[String])] = null
 
   /** filter out scores below threshold. this is an optional step.*/
   def filter(score : Double) : MinHashLSHModel = {

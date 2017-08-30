@@ -13,10 +13,10 @@ import scala.util.Random
 /**
   * minhash模型的构造方法
   * @param n 表示生成构建hash值种子的上限值,>=item最大值
-  * @param w 表示生成拆分的距离度量
+  * @param distance 表示生成拆分的距离度量
   * @param numRows 表示hash表的个数
   */
-class E2LSHModel(n : Int, w : Int ,numRows : Int,k : Int,ts : Int) extends Serializable {
+class E2LSHModel(n : Int, distance : Int ,numRows : Int,k : Int,ts : Int) extends Serializable {
 
   val tablesize = ts
   private val C  = (Math.pow(2, 32) - 5).toInt
@@ -24,7 +24,7 @@ class E2LSHModel(n : Int, w : Int ,numRows : Int,k : Int,ts : Int) extends Seria
   private val _hashFunctions = ListBuffer[E2Hasher]()
   //生成hash表列表
   for (i <- 0 until numRows)
-    _hashFunctions += E2Hasher.create(n,w)
+    _hashFunctions += E2Hasher.create(n,distance)
   //为hash表添加id
   final val hashFunctions : List[(E2Hasher, Int)] = _hashFunctions.toList.zipWithIndex
 
@@ -55,7 +55,7 @@ class E2LSHModel(n : Int, w : Int ,numRows : Int,k : Int,ts : Int) extends Seria
   var scores : RDD[(Long, Double)] = null
 
   /** **/
-  var vector_hashlist : RDD[(String, (DenseVector,List[(Int,Int)]))] = null
+  var vector_hashlist : RDD[(String, List[(Int,Int)])] = null
 
   /** filter out scores below threshold. this is an optional step.*/
   def filter(score : Double) : E2LSHModel = {

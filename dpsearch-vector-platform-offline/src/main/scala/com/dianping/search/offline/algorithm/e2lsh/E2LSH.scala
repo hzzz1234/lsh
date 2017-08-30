@@ -2,21 +2,22 @@ package com.dianping.search.offline.algorithm.e2lsh
 
 import java.lang.Math._
 
-import org.apache.spark.mllib.linalg.{DenseVector, SparseVector}
+import org.apache.spark.mllib.linalg.{DenseVector, SparseVector,Vector}
 import org.apache.spark.rdd.RDD
 
 /**
   * Created by zhen.huaz on 2017/8/11.
   * support format : (vectorid,vector)
   */
-class E2LSH (data : RDD[(String,DenseVector)], w : Int, numRows : Int, numBands : Int, ts : Int ,minClusterSize : Int) extends Serializable {
+class E2LSH (origin_data : RDD[(String,Vector)], distance : Int, numRows : Int, numBands : Int, ts : Int ,minClusterSize : Int) extends Serializable {
 
   /** run LSH using the constructor parameters */
   def run() : E2LSHModel = {
+    val data = origin_data.map(line => (line._1,line._2.toDense)).cache
     val n = data.first()._2.size
 
     //创建一个minhash的模型
-    val model = new E2LSHModel(n,w,numRows,numRows/numBands,ts)
+    val model = new E2LSHModel(n,distance,numRows,numRows/numBands,ts)
 
 
     //compute signatures from matrix
@@ -27,7 +28,7 @@ class E2LSH (data : RDD[(String,DenseVector)], w : Int, numRows : Int, numBands 
     val mid = signatures.groupByKey().map(x => ((model.H2(x._2.toArray) % model.tablesize,model.H2(x._2.toArray)),x._1._1)).cache()
 
 
-    model.vector_hashlist = data.join(mid.map(x => x.swap).groupByKey().map(x => (x._1,x._2.toList))).map(row => (row._1,(row._2._1,row._2._2)))
+    model.vector_hashlist = data.join(mid.map(x => x.swap).groupByKey().map(x => (x._1,x._2.toList))).map(row => (row._1,row._2._2))
 
       //reorganize data for shuffle
     //this gives us ((band#, hash of minhash list), vector id)
