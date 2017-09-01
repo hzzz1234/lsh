@@ -40,12 +40,13 @@ object LSHLauncher {
     val VECTORTYPE = args(6).toInt
 
     var origin_data : RDD[(String,Vector)] = null
-    val SPARKCONF = new SparkConf().setAppName(APPNAME).setMaster("local")
+    val SPARKCONF = new SparkConf().setAppName(APPNAME)
     val SPARKCONTEXT = new SparkContext(SPARKCONF)
 
     //输入数据初始化
     if(INPUTTYPE == 1){
       if(VECTORTYPE == 1){
+
         origin_data = SPARKCONTEXT.textFile(INPUT).map(line => (line.split(ROWSPILTER)(0)
           , Vectors.dense(for (ele <- line.split(ROWSPILTER)(1).split(VECTORSPILTER)) yield ele.toDouble)))
       } else {
@@ -85,29 +86,29 @@ object LSHLauncher {
       val lsh = new MinHashLSH(origin_data = origin_data, p = PrimeUtils.primes(maxid), numRows = n, numBands = NUMBANDS, minClusterSize = 2)
       val model = lsh.run
 
-      model.vector_hashlist.map(line => line._1 + "\t" + listToString(line._2)).saveAsTextFile(OUTPUT + "/vector_hashlist")
+      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
       model.scores.map(line => line._1 + "\t" + line._2).saveAsTextFile(OUTPUT+"/scores")
       SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
-      model.cluster_vector.groupByKey().map(line => line._1+"\t"+listToString(line._2.toList)).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
+      model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
     } else if(LSHTYPE == 2){
       val dimension = args(10).toInt
       val lsh = new CosineLSH(origin_data = origin_data, dimension = dimension, numRows = n, numBands = NUMBANDS, minClusterSize = 2)
       val model = lsh.run
 
-      model.vector_hashlist.map(line => line._1 + "\t" + listToString(line._2)).saveAsTextFile(OUTPUT + "/vector_hashlist")
+      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
       model.scores.map(line => line._1 + "\t" + line._2).saveAsTextFile(OUTPUT+"/scores")
       SPARKCONTEXT.parallelize(model.hashVectors).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
-      model.cluster_vector.groupByKey().map(line => line._1+"\t"+listToString(line._2.toList)).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
+      model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
     } else if(LSHTYPE == 3){
       val distance = args(10).toInt
       val tablesize = args(11).toInt
 
       val lsh = new E2LSH(origin_data = origin_data, distance = distance, numRows = n, numBands = NUMBANDS,ts = tablesize, minClusterSize = 2)
       val model = lsh.run
-      model.vector_hashlist.map(line => line._1 + "\t" + listToString(line._2)).saveAsTextFile(OUTPUT + "/vector_hashlist")
+      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
       model.scores.map(line => line._1 + "\t" + line._2).saveAsTextFile(OUTPUT+"/scores")
       SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
-      model.cluster_vector.groupByKey().map(line => line._1+"\t"+listToString(line._2.toList)).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
+      model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
     } else {
       System.err.println("Usage:LSHLauncher" +
         "<appname> [inputtype=1{1:file,2:sql}] <inputpath|inputsql> <outputpath> <row_spilter> <vector_spilter> <vectortype:{1:DenseVector,2:SparseVector}> \n" +
@@ -251,12 +252,4 @@ object LSHLauncher {
 
   }
 
-
-  def listToString[T](list : List[T]): Unit ={
-    val sb = new StringBuilder
-    for(ele <- list) {
-      sb.append(ele+" ")
-    }
-    sb.toString()
-  }
 }
