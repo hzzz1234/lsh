@@ -32,7 +32,11 @@ class GaussianRandomNumberGenerator extends RandomNumberGenerator{
     var i: Int = 0
     while (i < vector.length) {
       {
-        vector(i) = nextNormalizedDouble
+        if(nextNormalizedDouble>0)
+          vector(i) = 1.0
+        else
+          vector(i) = -1.0
+//        vector(i) = nextNormalizedDouble
       }
       ({
         i += 1; i

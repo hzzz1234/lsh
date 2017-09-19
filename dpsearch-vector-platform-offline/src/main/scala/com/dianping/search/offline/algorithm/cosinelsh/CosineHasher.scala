@@ -26,7 +26,7 @@ class CosineHashVector(n : Int,vector: Array[Double]) extends Serializable {
     val sb = new StringBuilder
     sb.append("[")
     for( ele <- vector ) {
-      sb.append("%.5f".format(ele)+" ")
+      sb.append("%.0f".format(ele)+" ")
     }
     sb.append("]")
     sb.toString()
