@@ -7,7 +7,6 @@ import com.dianping.search.offline.algorithm.e2lsh.E2LSH
 import com.dianping.search.offline.algorithm.minhash.MinHashLSH
 import com.dianping.search.offline.utils.PrimeUtils
 import org.apache.hadoop.fs.Path
-import org.apache.spark
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.mllib.linalg.{SparseVector, Vectors,Vector}
 import org.apache.spark.rdd.RDD
@@ -21,10 +20,10 @@ import org.apache.spark.sql.hive.HiveContext
 object LSHLauncher {
   def main(args: Array[String]) {
 
-    if(args.length != 12 && args.length != 11){
+    if(args.length != 13 && args.length != 12){
 
       System.err.println("Usage:LSHLauncher" +
-        "<appname> [inputtype=1{1:file,2:sql}] <inputpath|inputsql> <outputpath> <row_spilter> <vector_spilter> <vectortype:{1:DenseVector,2:SparseVector}> \n" +
+        "<appname> <type> [inputtype=1{1:file,2:sql}] <inputpath|inputsql> <outputpath> <row_spilter> <vector_spilter> <vectortype:{1:DenseVector,2:SparseVector}> \n" +
         "\t\t\t[lshtype=1{1:minhashlsh,2:cosinelsh,3:e2lsh}] <numbands> <num_in_a_band> <maxid> <m> \n" +
         "\t\t\t[lshtype=2{1:minhashlsh,2:cosinelsh,3:e2lsh}] <numbands> <num_in_a_band> <dimension> \n" +
         "\t\t\t[lshtype=3{1:minhashlsh,2:cosinelsh,3:e2lsh}] <numbands> <num_in_a_band> <distance> <tablesize>");
@@ -32,15 +31,16 @@ object LSHLauncher {
 
     }
     val APPNAME = args(0)
-    val INPUTTYPE : Int = args(1).toInt
-    val INPUT = args(2)
-    val OUTPUT = args(3)
-    val ROWSPILTER = args(4)
-    val VECTORSPILTER = args(5)
-    val VECTORTYPE = args(6).toInt
+    val output_type = args(1)
+    val INPUTTYPE : Int = args(2).toInt
+    val INPUT = args(3)
+    val OUTPUT = args(4)
+    val ROWSPILTER = args(5)
+    val VECTORSPILTER = args(6)
+    val VECTORTYPE = args(7).toInt
 
     var origin_data : RDD[(String,Vector)] = null
-    val SPARKCONF = new SparkConf().setAppName(APPNAME)
+    val SPARKCONF = new SparkConf().setAppName(APPNAME).setMaster("local")
     val SPARKCONTEXT = new SparkContext(SPARKCONF)
 
     //输入数据初始化
@@ -66,9 +66,9 @@ object LSHLauncher {
       }
     }
 
-    val LSHTYPE = args(7).toInt
-    val NUMBANDS = args(8).toInt
-    val NUM_IN_A_BAND = args(9).toInt
+    val LSHTYPE = args(8).toInt
+    val NUMBANDS = args(9).toInt
+    val NUM_IN_A_BAND = args(10).toInt
     val n = NUMBANDS * NUM_IN_A_BAND
 
     val hadoopConf = SPARKCONTEXT.hadoopConfiguration
@@ -80,38 +80,45 @@ object LSHLauncher {
 
     //算法类型
     if(LSHTYPE == 1){
-      val maxid = args(10).toInt
-      val m = args(11).toInt
+      val maxid = args(11).toInt
+      val m = args(12).toInt
 
       val lsh = new MinHashLSH(origin_data = origin_data, p = PrimeUtils.primes(maxid), numRows = n, numBands = NUMBANDS, minClusterSize = 2)
       val model = lsh.run
 
-      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
+//      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
       model.scores.map(line => line._1 + "\t" + line._2).saveAsTextFile(OUTPUT+"/scores")
       SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
+
+      origin_data.join(model.vector_hashlist).map(row => ((Math.random()*60000000).toInt)+"\t"+row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
     } else if(LSHTYPE == 2){
-      val dimension = args(10).toInt
+      val dimension = args(11).toInt
       val lsh = new CosineLSH(origin_data = origin_data, dimension = dimension, numRows = n, numBands = NUMBANDS, minClusterSize = 2)
       val model = lsh.run
 
-      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
+//      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
       model.scores.map(line => line._1 + "\t" + line._2).saveAsTextFile(OUTPUT+"/scores")
       SPARKCONTEXT.parallelize(model.hashVectors).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
+
+      origin_data.join(model.vector_hashlist).map(row => ((Math.random()*60000000).toInt)+"\t"+row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
     } else if(LSHTYPE == 3){
-      val distance = args(10).toInt
-      val tablesize = args(11).toInt
+      val distance = args(11).toInt
+      val tablesize = args(12).toInt
 
       val lsh = new E2LSH(origin_data = origin_data, distance = distance, numRows = n, numBands = NUMBANDS,ts = tablesize, minClusterSize = 2)
       val model = lsh.run
-      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
+//      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
       model.scores.map(line => line._1 + "\t" + line._2).saveAsTextFile(OUTPUT+"/scores")
       SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
+
+      origin_data.join(model.vector_hashlist).map(row => ((Math.random()*60000000).toInt)+"\t"+row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
+
     } else {
       System.err.println("Usage:LSHLauncher" +
-        "<appname> [inputtype=1{1:file,2:sql}] <inputpath|inputsql> <outputpath> <row_spilter> <vector_spilter> <vectortype:{1:DenseVector,2:SparseVector}> \n" +
+        "<appname> <type> [inputtype=1{1:file,2:sql}] <inputpath|inputsql> <outputpath> <row_spilter> <vector_spilter> <vectortype:{1:DenseVector,2:SparseVector}> \n" +
         "\t\t\t[lshtype=1{1:minhashlsh,2:cosinelsh,3:e2lsh}] <numbands> <num_in_a_band> <maxid> <m> \n" +
         "\t\t\t[lshtype=2{1:minhashlsh,2:cosinelsh,3:e2lsh}] <numbands> <num_in_a_band> <dimension> \n" +
         "\t\t\t[lshtype=3{1:minhashlsh,2:cosinelsh,3:e2lsh}] <numbands> <num_in_a_band> <distance> <tablesize>");
