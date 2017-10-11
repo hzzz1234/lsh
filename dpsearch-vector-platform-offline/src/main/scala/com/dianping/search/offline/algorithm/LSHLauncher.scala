@@ -40,7 +40,8 @@ object LSHLauncher {
     val VECTORTYPE = args(7).toInt
 
     var origin_data : RDD[(String,Vector)] = null
-    val SPARKCONF = new SparkConf().setAppName(APPNAME).setMaster("local")
+    val SPARKCONF = new SparkConf()
+//      .setAppName(APPNAME).setMaster("local")
     val SPARKCONTEXT = new SparkContext(SPARKCONF)
 
     //输入数据初始化
