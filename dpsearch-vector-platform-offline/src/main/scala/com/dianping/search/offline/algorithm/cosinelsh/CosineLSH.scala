@@ -100,7 +100,7 @@ class CosineLSH (origin_data : RDD[(String,Vector)], dimension : Int, numRows : 
     * @return
     */
   def md5Hash(text:String):String =
-    java.security.MessageDigest.getInstance("MD5").digest(text.getBytes()).map(0xFF & _).map{"%02x".format(_)}.foldLeft(""){_+_}
+    java.security.MessageDigest.getInstance("MD5").digest(text.getBytes()).map(0xFF & _).map{"%02x".format(_)}.foldLeft(""){_+_}.substring(8,24)
 
 
   /** compute a single vector against an existing model */

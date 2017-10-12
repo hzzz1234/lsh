@@ -41,7 +41,7 @@ object LSHLauncher {
 
     var origin_data : RDD[(String,Vector)] = null
     val SPARKCONF = new SparkConf()
-//      .setAppName(APPNAME).setMaster("local")
+      .setAppName(APPNAME).setMaster("local")
     val SPARKCONTEXT = new SparkContext(SPARKCONF)
 
     //输入数据初始化
@@ -92,7 +92,7 @@ object LSHLauncher {
       SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
 
-      origin_data.join(model.vector_hashlist).map(row => ((Math.random()*60000000).toInt)+"\t"+row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
+      origin_data.join(model.vector_hashlist).map(row => row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
     } else if(LSHTYPE == 2){
       val dimension = args(11).toInt
       val lsh = new CosineLSH(origin_data = origin_data, dimension = dimension, numRows = n, numBands = NUMBANDS, minClusterSize = 2)
@@ -103,7 +103,7 @@ object LSHLauncher {
       SPARKCONTEXT.parallelize(model.hashVectors).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
 
-      origin_data.join(model.vector_hashlist).map(row => ((Math.random()*60000000).toInt)+"\t"+row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
+      origin_data.join(model.vector_hashlist).map(row => row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
     } else if(LSHTYPE == 3){
       val distance = args(11).toInt
       val tablesize = args(12).toInt
@@ -115,7 +115,7 @@ object LSHLauncher {
       SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
 
-      origin_data.join(model.vector_hashlist).map(row => ((Math.random()*60000000).toInt)+"\t"+row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
+      origin_data.join(model.vector_hashlist).map(row => row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
 
     } else {
       System.err.println("Usage:LSHLauncher" +
