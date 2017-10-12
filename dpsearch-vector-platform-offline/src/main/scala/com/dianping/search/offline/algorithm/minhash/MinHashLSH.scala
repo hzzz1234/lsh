@@ -79,7 +79,7 @@ class MinHashLSH (origin_data : RDD[(String,Vector)], p : Int, numRows : Int, nu
       "%02x".format(_)
     }.foldLeft("") {
       _ + _
-    }
+    }.substring(8,24)
 
 
   /** compute a single vector against an existing model */
