@@ -29,7 +29,7 @@ class MinHashLSHModel(p : Int, numRows : Int) extends Serializable {
 
   /** the "bands" ((hash of List, band#), row#) */
 //  var bands : RDD[((Int, Int), Iterable[String])] = null
-  var bands : RDD[(String, Iterable[String])] = null
+  var bands : RDD[((String,Int), Iterable[String])] = null
 
   /** (vector id, cluster id) */
   var vector_cluster : RDD[(String, Long)] = null

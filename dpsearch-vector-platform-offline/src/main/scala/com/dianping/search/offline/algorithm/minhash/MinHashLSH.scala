@@ -1,6 +1,7 @@
 package com.dianping.search.offline.algorithm.minhash
 
-import org.apache.spark.mllib.linalg.{SparseVector, Vectors,Vector}
+import com.dianping.search.offline.utils.MD5Utils
+import org.apache.spark.mllib.linalg.{SparseVector, Vector, Vectors}
 import org.apache.spark.rdd.RDD
 
 /**
@@ -12,6 +13,15 @@ import org.apache.spark.rdd.RDD
   * @param minClusterSize 最小聚合数(一般为2)
   */
 class MinHashLSH (origin_data : RDD[(String,Vector)], p : Int, numRows : Int, numBands : Int, minClusterSize : Int) extends Serializable {
+
+
+  def rank(toList: List[(String, Int)]) = {
+    val arr = new Array[String](toList.length);
+    for( ele <- toList){
+      arr(ele._2) = ele._1
+    }
+    arr.toList
+  }
 
   /** run MinhashLSH using the constructor parameters */
   def run(): MinHashLSHModel = {
@@ -28,10 +38,10 @@ class MinHashLSH (origin_data : RDD[(String,Vector)], p : Int, numRows : Int, nu
 
     // 对同band下的数据进行签名
     // output ((band+minlist)->bandhashvalue,key)
-    val mid = signatures.groupByKey().map(x => (transforMD5(x._1._2, x._2), x._1._1)).cache()
+    val mid = signatures.groupByKey().map(x => ((transforMD5(x._1._2, x._2),x._1._2), x._1._1)).cache()
 
     // output (key,hashlist)
-    model.vector_hashlist = data.join(mid.map(x => x.swap).groupByKey().map(x => (x._1, x._2.toList))).map(row => (row._1,row._2._2)).cache()
+    model.vector_hashlist = data.join(mid.map(x => x.swap).groupByKey().map(x => (x._1, rank(x._2.toList)))).map(row => (row._1,row._2._2)).cache()
 
     // 组织所有在同一个band且minhashlist的值一样的数据合并到一起
     // output (bandhashvalue, vectorid list)
@@ -66,20 +76,20 @@ class MinHashLSH (origin_data : RDD[(String,Vector)], p : Int, numRows : Int, nu
       sb.append(it + " ")
     }
     sb.append("]" + band)
-    md5Hash(sb.toString)
+    MD5Utils.md5Hash(sb.toString)
   }
 
-  /**
-    *
-    * @param text
-    * @return
-    */
-  def md5Hash(text: String): String =
-    java.security.MessageDigest.getInstance("MD5").digest(text.getBytes()).map(0xFF & _).map {
-      "%02x".format(_)
-    }.foldLeft("") {
-      _ + _
-    }.substring(8,24)
+//  /**
+//    *
+//    * @param text
+//    * @return
+//    */
+//  def md5Hash(text: String): String =
+//    java.security.MessageDigest.getInstance("MD5").digest(text.getBytes()).map(0xFF & _).map {
+//      "%02x".format(_)
+//    }.foldLeft("") {
+//      _ + _
+//    }.substring(8,24)
 
 
   /** compute a single vector against an existing model */
