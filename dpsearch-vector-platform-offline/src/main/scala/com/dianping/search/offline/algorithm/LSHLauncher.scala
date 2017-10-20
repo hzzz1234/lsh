@@ -89,7 +89,7 @@ object LSHLauncher {
 
 //      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
       model.scores.map(line => line._1 + "\t" + line._2).saveAsTextFile(OUTPUT+"/scores")
-      SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
+      SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2+"\t"+NUMBANDS+"\t"+NUM_IN_A_BAND).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
 
       origin_data.join(model.vector_hashlist).map(row => row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
@@ -112,7 +112,7 @@ object LSHLauncher {
       val model = lsh.run
 //      model.vector_hashlist.map(line => line._1 + "\t" + line._2.mkString(" ")).saveAsTextFile(OUTPUT + "/vector_hashlist")
       model.scores.map(line => line._1 + "\t" + line._2).saveAsTextFile(OUTPUT+"/scores")
-      SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2).saveAsTextFile(OUTPUT+"/hash")
+      SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2+"\t"+NUMBANDS+"\t"+NUM_IN_A_BAND).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
 
       origin_data.join(model.vector_hashlist).map(row => row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
