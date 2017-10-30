@@ -5,10 +5,10 @@ import java.nio.file.FileSystem
 import com.dianping.search.offline.algorithm.cosinelsh.CosineLSH
 import com.dianping.search.offline.algorithm.e2lsh.E2LSH
 import com.dianping.search.offline.algorithm.minhash.MinHashLSH
-import com.dianping.search.offline.utils.PrimeUtils
+import com.dianping.search.offline.utils.{PrimeUtils, VectorUtils}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.mllib.linalg.{SparseVector, Vectors,Vector}
+import org.apache.spark.mllib.linalg.{SparseVector, Vector, Vectors}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.hive.HiveContext
 
@@ -80,7 +80,7 @@ object LSHLauncher {
     }
 
     //算法类型
-    if(LSHTYPE == 1){
+    if(LSHTYPE == 1){ //使用时需修改
       val maxid = args(11).toInt
       val m = args(12).toInt
 
@@ -92,7 +92,7 @@ object LSHLauncher {
       SPARKCONTEXT.parallelize(model.hashFunctions).map(line => line.swap._1.toString()+"\t"+line.swap._2+"\t"+NUMBANDS+"\t"+NUM_IN_A_BAND).saveAsTextFile(OUTPUT+"/hash")
       model.cluster_vector.groupByKey().map(line => line._1+"\t"+line._2.toList.mkString(" ")).saveAsTextFile(OUTPUT + "/cluster_vectorlist")
 
-      origin_data.join(model.vector_hashlist).map(row => row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
+      origin_data.join(model.vector_hashlist).map(row => row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+VectorUtils.dotT(row._2._1.toArray)+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
     } else if(LSHTYPE == 2){
       val dimension = args(11).toInt
       val lsh = new CosineLSH(origin_data = origin_data, dimension = dimension, numRows = n, numBands = NUMBANDS, minClusterSize = 2)
@@ -117,7 +117,7 @@ object LSHLauncher {
 
       origin_data.join(model.vector_hashlist).map(row => row._1+"\t"+output_type+"\t"+row._2._1.toArray.toList.mkString(" ")+"\t"+row._2._2.mkString("\t")).saveAsTextFile(OUTPUT + "/vectorid_vector_hashlist")
 
-    } else {
+    } else { //使用时需修改
       System.err.println("Usage:LSHLauncher" +
         "<appname> <type> [inputtype=1{1:file,2:sql}] <inputpath|inputsql> <outputpath> <row_spilter> <vector_spilter> <vectortype:{1:DenseVector,2:SparseVector}> \n" +
         "\t\t\t[lshtype=1{1:minhashlsh,2:cosinelsh,3:e2lsh}] <numbands> <num_in_a_band> <maxid> <m> \n" +
