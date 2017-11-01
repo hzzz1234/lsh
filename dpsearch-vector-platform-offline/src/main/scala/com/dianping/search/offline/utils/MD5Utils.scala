@@ -1,7 +1,7 @@
 package com.dianping.search.offline.utils
 
 /**
-  * Created by zhen.huaz on 2017/10/18.
+  * Created by zhen.huaz on 2017/11/1.
   */
 object MD5Utils {
   /**
@@ -11,5 +11,5 @@ object MD5Utils {
     */
   def md5Hash(text:String):String =
     java.security.MessageDigest.getInstance("MD5").digest(text.getBytes()).map(0xFF & _).map{"%02x".format(_)}.foldLeft(""){_+_}.substring(8,24)
-
 }
+
