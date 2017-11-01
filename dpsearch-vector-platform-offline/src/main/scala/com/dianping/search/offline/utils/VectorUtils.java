@@ -9,6 +9,11 @@ public class VectorUtils {
     public static F2jBLAS f2jBLAS = new F2jBLAS();
 
     public static double dotT(double v2[]){
-        return f2jBLAS.dnrm2(v2.length,v2,0,1);
+        double score = 0;
+        for(int i=0;i<v2.length;i++){
+            score+=v2[i]*v2[i];
+        }
+        return score;
     }
+
 }
